@@ -1,0 +1,8 @@
+[dirs]
+storage_dir=""
+backup_dir=""
+
+[backup]
+auto_backup=false
+max_backup=5
+timestamp_fmt=""
