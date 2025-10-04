@@ -1,0 +1,320 @@
+#!/bin/bash
+#
+# wharf - simple file and directory description tool
+
+set -euo pipefail
+
+VERSION="1.1.0"
+WHARF_DIR="$HOME/.config/wharf"
+WHARF_FILE="$WHARF_DIR/wharf.json"
+
+# Cleanup temporary files on exit
+cleanup_temp_files() {
+    command rm -f "$WHARF_FILE.tmp" "/tmp/what.*" 2>/dev/null || true
+}
+trap cleanup_temp_files EXIT
+
+# Ensure config directory exists
+mkdir -p "$WHARF_DIR"
+
+# Initialize JSON if empty
+if [ ! -f "$WHARF_FILE" ] || [ ! -s "$WHARF_FILE" ]; then
+    echo "{}" > "$WHARF_FILE"
+fi
+
+# Check jq dependency
+check_jq() {
+    if ! command -v jq &> /dev/null; then
+        echo "Error: jq is required but not installed. Install with: sudo apt install jq"
+        exit 1
+    fi
+}
+
+# Function to get relative path from home directory
+get_relative_path() {
+    local path="$1"
+
+    if [[ "$path" == /* ]]; then
+        if [[ "$path" == "$HOME"* ]]; then
+            echo "${path#$HOME/}"
+        else
+            echo "$path"
+        fi
+    else
+        if command -v realpath &>/dev/null; then
+            realpath "$path" --relative-to="$HOME" 2>/dev/null || echo "$path"
+        else
+            echo "$path"
+        fi
+    fi
+}
+
+# Show help information
+show_help() {
+    cat <<EOF
+what - simple file/directory description tool
+Version: $VERSION
+
+Usage:
+  what <path>                         Show description for path
+  what add <path> "description"       Add or update description
+  what edit <path>                    Edit description interactively
+  what remove <path>                  Remove description
+  what list                           List all descriptions
+  what search "text"                  Search descriptions
+  what export [file]                  Export descriptions to file
+  what import <file>                  Import descriptions from file
+  what version                        Show version information
+  what help                           Show this help
+EOF
+}
+
+# Main command logic
+case "${1:-}" in
+    "list")
+        check_jq
+        jq -r '
+            to_entries |
+            if length == 0 then
+                "No descriptions stored yet. Use: what add <path> \"description\""
+            else
+                .[] | "\(.key): \(.value)"
+            end
+        ' "$WHARF_FILE"
+        ;;
+
+    "search")
+        check_jq
+        if [ -z "${2:-}" ]; then
+            echo "Usage: what search \"text\""
+            exit 1
+        fi
+        jq -r --arg search "$2" '
+            to_entries |
+            map(select((.key | contains($search)) or (.value | contains($search)))) |
+            if length > 0 then
+                .[] | "\(.key): \(.value)"
+            else
+                "No results found for: \($search)"
+            end
+        ' "$WHARF_FILE"
+        ;;
+
+    "remove")
+        check_jq
+        if [ -z "${2:-}" ]; then
+            echo "Usage: what remove <path>"
+            exit 1
+        fi
+        path=$(get_relative_path "$2")
+
+        # Check if entry exists before attempting removal
+        current=$(jq -r --arg path "$path" '.[$path] // ""' "$WHARF_FILE")
+        if [ -z "$current" ]; then
+            echo "No description found for: $path"
+            exit 1
+        fi
+
+        # Use secure temporary file
+        TMP_FILE=$(mktemp) || exit 1
+
+        jq --arg path "$path" 'del(.[$path])' "$WHARF_FILE" > "$TMP_FILE" && command mv "$TMP_FILE" "$WHARF_FILE"
+        echo "Removed description for: $path"
+        ;;
+
+    "edit")
+        check_jq
+        if [ -z "${2:-}" ]; then
+            echo "Usage: what edit <path>"
+            exit 1
+        fi
+        path=$(get_relative_path "$2")
+
+        # Path existence check
+        if [ ! -e "$2" ] && [ ! -e "$HOME/$path" ]; then
+            echo "Error: path '$2' does not exist"
+            known_paths=$(jq -r 'keys[]' "$WHARF_FILE" | grep -i "$(basename "$2")" | head -3)
+            if [ -n "$known_paths" ]; then
+                echo "Did you mean one of these?"
+                echo "$known_paths" | sed 's/^/  /'
+            fi
+            exit 1
+        fi
+
+        current=$(jq -r --arg path "$path" '.[$path] // ""' "$WHARF_FILE")
+        echo "Current description: ${current:-<none>}"
+
+        # Robust input handling with arrow key support
+        read -e -p "New description: " -i "$current" desc
+        if [ $? -ne 0 ]; then
+            echo "Cancelled."
+            exit 1
+        fi
+
+        if [ -z "$desc" ]; then
+            echo "Error: Description cannot be empty. Use 'what remove' to delete instead."
+            exit 1
+        fi
+
+        # Secure temp file
+        TMP_FILE=$(mktemp) || exit 1
+
+        jq --arg path "$path" --arg desc "$desc" '.[$path] = $desc' "$WHARF_FILE" > "$TMP_FILE" && command mv "$TMP_FILE" "$WHARF_FILE"
+        echo "Updated: $path: $desc"
+        ;;
+
+    "export")
+        check_jq
+        export_path="${2:-$PWD/descriptions.json}"
+        export_dir=$(dirname "$export_path")
+
+        # Create directory if it doesn't exist
+        if [ ! -d "$export_dir" ]; then
+            mkdir -p "$export_dir" || {
+                echo "Error: Cannot create directory '$export_dir'"
+                exit 1
+            }
+        fi
+
+        # Confirm overwrite if file exists
+        if [ -f "$export_path" ]; then
+            read -p "File '$export_path' exists. Overwrite? [y/N] " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo "Export cancelled."
+                exit 0
+            fi
+        fi
+
+        command cp "$WHARF_FILE" "$export_path"
+        echo "Exported to $export_path"
+        ;;
+
+    "import")
+        check_jq
+        if [ -z "${2:-}" ]; then
+            echo "Usage: what import <file>"
+            exit 1
+        fi
+
+        # Check if import file exists and is readable
+        if [ ! -f "$2" ] || [ ! -r "$2" ]; then
+            echo "Error: Import file '$2' does not exist or is not readable"
+            exit 1
+        fi
+
+        # Validate JSON format
+        if ! jq empty "$2" 2>/dev/null; then
+            echo "Error: '$2' is not valid JSON"
+            exit 1
+        fi
+
+        # Create backup and confirm overwrite
+        backup_file="$WHARF_FILE.backup.$(date +%Y%m%d_%H%M%S)"
+        command cp "$WHARF_FILE" "$backup_file" 2>/dev/null && echo "Backup created: $backup_file"
+
+        echo "Warning: This will overwrite ALL current descriptions."
+        read -p "Continue? [y/N] " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Import cancelled."
+            exit 0
+        fi
+
+        command cp "$2" "$WHARF_FILE"
+        echo "Imported from $2"
+        ;;
+
+    "add")
+        check_jq
+        if [ -z "${2:-}" ] || [ -z "${3:-}" ]; then
+            echo "Usage: what add <path> \"description\""
+            exit 1
+        fi
+        path=$(get_relative_path "$2")
+        description="${3}"
+
+        # Path existence check
+        if [ ! -e "$2" ] && [ ! -e "$HOME/$path" ]; then
+            echo "Error: path '$2' does not exist"
+            known_paths=$(jq -r 'keys[]' "$WHARF_FILE" | grep -i "$(basename "$2")" | head -3)
+            if [ -n "$known_paths" ]; then
+                echo "Did you mean one of these?"
+                echo "$known_paths" | sed 's/^/  /'
+            fi
+            exit 1
+        fi
+
+        # Validate description
+        if [ -z "$description" ]; then
+            echo "Error: Description cannot be empty"
+            exit 1
+        fi
+
+        existing=$(jq -r --arg path "$path" '.[$path] // ""' "$WHARF_FILE")
+
+        if [ -n "$existing" ]; then
+            echo "Description already exists: $existing"
+            read -p "Replace it? (y/N): " -n 1 -r
+            echo
+            # Handle read cancellation
+            if [ $? -ne 0 ]; then
+                echo "Cancelled."
+                exit 1
+            fi
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo "Cancelled."
+                exit 0
+            fi
+        fi
+
+        # Create temporary file for atomic update
+        TMP_FILE=$(mktemp) || exit 1
+
+        jq --arg path "$path" --arg desc "$description" '.[$path] = $desc' "$WHARF_FILE" > "$TMP_FILE" && command mv "$TMP_FILE" "$WHARF_FILE"
+
+        # Show success message
+        if [ -n "$existing" ]; then
+            echo "Description updated for: $path"
+        else
+            echo "Description added for: $path"
+        fi
+        ;;
+
+    "version")
+        echo "what v$VERSION"
+        ;;
+
+    "help"|"-h"|"--help")
+        show_help
+        ;;
+
+    *)
+        # Default behavior: show description for path
+        if [ -z "${1:-}" ]; then
+            show_help
+            exit 1
+        fi
+
+        check_jq
+        path=$(get_relative_path "$1")
+        desc=$(jq -r --arg path "$path" '.[$path] // ""' "$WHARF_FILE")
+        if [ -z "$desc" ]; then
+            echo "$path: No description found"
+            # Suggest similar paths if available
+            similar=$(jq -r --arg path "$path" '
+                to_entries | map(.key) | .[]
+                | select(test(".*" + ($path | split("/") | last) + ".*"; "i"))
+            ' "$WHARF_FILE" | head -3)
+
+            if [ -n "$similar" ]; then
+                echo "Similar paths with descriptions:"
+                echo "$similar" | sed 's/^/  /'
+            else
+                echo "Add a description with: what add \"$path\" \"your description\""
+            fi
+        else
+            echo "$path: $desc"
+        fi
+        ;;
+esac
