@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-VERSION="1.1.0"
+VERSION="0.1.0"
 WHARF_DIR="$HOME/.config/wharf"
 WHARF_FILE="$WHARF_DIR/wharf.json"
 
