@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*" # Triggers on tags like v1.0.0, etc.
+
+jobs:
+  build:
+    name: Build and Release (Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build release binary
+        run: |
+          cargo build --release --locked
+          mkdir -p dist
+          cp target/release/wharf dist/
+
+      - name: Verify binary is executable
+        run: |
+          chmod +x dist/wharf
+          file dist/wharf
+          ./dist/wharf --version
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/wharf
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
