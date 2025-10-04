@@ -52,3 +52,9 @@ what temp
 wharf search "delete"
 # output: dev/project/temp: this is safe to delete
 ```
+
+### Installation
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/haolamnm/wharf/main/install.sh | sh
+```
