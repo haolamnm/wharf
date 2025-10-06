@@ -1,8 +1,10 @@
 use crate::config::Config;
-use crate::error::Error;
+use crate::errors::Error;
 use dirs::home_dir;
+use rustyline::{Editor, error::ReadlineError};
 use std::{
     env,
+    io::{self, Write},
     path::{Path, PathBuf},
 };
 
@@ -82,30 +84,47 @@ pub fn get_relative_path(path: &str) -> Result<String, Error> {
 }
 
 pub fn confirm(prompt: &str) -> bool {
-    println!("{} [y/N]", prompt);
+    print!("{} [y/N]: ", prompt);
+    io::stdout().flush().expect("failed to flush stdout");
+
     let mut input = String::new();
-    if std::io::stdin().read_line(&mut input).is_err() {
+    if io::stdin().read_line(&mut input).is_err() {
         return false;
     }
     matches!(input.trim().to_lowercase().as_str(), "y" | "yes")
 }
 
 pub fn read_input(prompt: &str, default: &str) -> Result<String, Error> {
-    print!("{}", prompt);
-    if !default.is_empty() {
-        print!(" [{}]", default);
-    }
-    print!(": ");
+    let mut rl = Editor::<(), _>::new().map_err(|e: ReadlineError| {
+        Error::IoError(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("failed to initialize input editor: {}", e),
+        ))
+    })?;
 
-    std::io::Write::flush(&mut std::io::stdout())?;
+    let full_prompt = format!("{}: ", prompt);
 
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
+    // Pre-fill the input buffer with the default value (user can edit it!)
+    let _ = rl.add_history_entry(default);
+    let initial = default.to_string();
+    let readline = rl.readline_with_initial(&full_prompt, (&initial, ""));
 
-    let input = input.trim();
-    if input.is_empty() {
-        Ok(default.to_string())
-    } else {
-        Ok(input.to_string())
+    match readline {
+        Ok(line) => {
+            let trimmed = line.trim();
+            // If user just pressed Enter, return default
+            if trimmed.is_empty() {
+                Ok(default.to_string())
+            } else {
+                Ok(trimmed.to_string())
+            }
+        }
+        Err(ReadlineError::Interrupted | ReadlineError::Eof) => {
+            Ok(default.to_string()) // Ctrl-C or Ctrl-D
+        }
+        Err(err) => Err(Error::IoError(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("input error: {}", err),
+        ))),
     }
 }
