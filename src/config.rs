@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use dirs::{cache_dir, data_dir};
+use dirs::data_local_dir;
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
@@ -31,15 +31,13 @@ pub struct BackupConfig {
 }
 
 fn default_storage_dir() -> PathBuf {
-    data_dir()
+    data_local_dir()
         .map(|dir| dir.join("wharf"))
         .unwrap_or_else(|| PathBuf::from("wharf"))
 }
 
 fn default_backup_dir() -> PathBuf {
-    cache_dir()
-        .map(|dir| dir.join("wharf"))
-        .unwrap_or_else(|| PathBuf::from("wharf"))
+    default_storage_dir().join("backups")
 }
 
 fn default_max_backups() -> usize {
@@ -47,7 +45,7 @@ fn default_max_backups() -> usize {
 }
 
 fn default_timestamp_format() -> String {
-    "%Y-%m-%d_%H-%M-%S".to_string()
+    "%Y%m%d-%H%M%S".to_string()
 }
 
 impl Config {
