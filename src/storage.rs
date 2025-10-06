@@ -84,7 +84,46 @@ impl Storage {
         let backup_path = self.backup_dir.join(backup_filename);
 
         fs::copy(&self.storage_path, &backup_path)?;
+
+        // Auto-prune old backups
+        let backups = self.list_backups()?;
+        if backups.len() > self.backup_config.max_backups {
+            let to_remove = backups.len() - self.backup_config.max_backups;
+            for old_backups in backups.iter().take(to_remove) {
+                if let Err(e) = fs::remove_file(old_backups) {
+                    eprintln!("failed to remove old backup {:?}: {}", old_backups, e);
+                }
+            }
+        }
+
         Ok(backup_path.to_string_lossy().into_owned())
+    }
+
+    pub fn list_backups(&self) -> Result<Vec<PathBuf>, Error> {
+        let mut backups: Vec<PathBuf> = fs::read_dir(&self.backup_dir)?
+            .filter_map(|entry| {
+                entry.ok().and_then(|e| {
+                    let path = e.path();
+                    if path.is_file()
+                        && path
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .map_or(false, |n| {
+                                n.starts_with("wharf.bak.") && n.ends_with(".json")
+                            })
+                    {
+                        Some(path)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect();
+
+        // Sort by created time in filename
+        backups.sort_by_key(|path| path.clone());
+
+        Ok(backups)
     }
 
     pub fn get_storage_path(&self) -> &PathBuf {
