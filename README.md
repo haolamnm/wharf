@@ -15,16 +15,17 @@ A simple file and directory description tool
 Usage: wharf <COMMAND>
 
 Commands:
-  show      Show description
-  add       Add or update description
-  edit      Edit description interactively
-  list      List all descriptions
-  search    Search descriptions
-  remove    Remove description
-  export    Export descriptions to file
-  import    Import descriptions from file
-  generate  Generate shell completion scripts
-  help      Print this message or the help of the given subcommand(s)
+  show        Show description
+  add         Add or update description
+  edit        Edit description interactively
+  list        List all descriptions
+  search      Search descriptions
+  remove      Remove description
+  autoremove  Autoremove descriptions for non-existent paths
+  export      Export descriptions to file
+  import      Import descriptions from file
+  generate    Generate shell completion scripts
+  help        Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help     Print help
@@ -42,7 +43,7 @@ alias what="wharf show"
 cd ~/dev/project
 mkdir temp
 wharf add temp "this is safe to delete"
-# output: Description updated for: dev/project/temp
+# output: dscription added for: dev/project/temp
 
 # later...
 what temp
