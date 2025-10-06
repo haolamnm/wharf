@@ -22,7 +22,7 @@ pub fn load_config() -> Result<Config, Error> {
     // Load or create default config
     let config = if config_path.exists() {
         Config::load(&config_path)
-            .map_err(|e| Error::ConfigError(format!("Failed to load config: {}", e)))?
+            .map_err(|e| Error::ConfigError(format!("failed to load config: {}", e)))?
     } else {
         // Use default config if file doesn't exist
         let default_config = Config::default();
@@ -30,19 +30,19 @@ pub fn load_config() -> Result<Config, Error> {
         // Optionally create the config directory and save default config
         if let Some(parent) = config_path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
-                Error::ConfigError(format!("Failed to create config directory: {}", e))
+                Error::ConfigError(format!("failed to create config directory: {}", e))
             })?;
         }
 
         // Save default config for user to customize
         let config_content = toml::to_string_pretty(&default_config).map_err(|e| {
-            Error::ConfigError(format!("Failed to serialize default config: {}", e))
+            Error::ConfigError(format!("failed to serialize default config: {}", e))
         })?;
 
         std::fs::write(&config_path, config_content)
-            .map_err(|e| Error::ConfigError(format!("Failed to write default config: {}", e)))?;
+            .map_err(|e| Error::ConfigError(format!("failed to write default config: {}", e)))?;
 
-        println!("Created default config at: {}", config_path.display());
+        println!("default config created: {}", config_path.display());
         default_config
     };
 
