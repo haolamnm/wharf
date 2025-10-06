@@ -1,11 +1,11 @@
 mod commands;
 mod config;
-mod error;
+mod errors;
 mod storage;
 mod utils;
 
 use clap::{Parser, Subcommand};
-use error::Error;
+use errors::Error;
 use std::process;
 
 #[derive(Subcommand, Clone)]
@@ -61,7 +61,7 @@ pub enum Commands {
 
 fn main() {
     if let Err(e) = run() {
-        eprintln!("Error: {}", e);
+        eprintln!("error: {}", e);
         process::exit(1);
     }
 }

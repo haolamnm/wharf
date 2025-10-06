@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::errors::Error;
 use crate::storage::Storage;
 use crate::utils;
 use std::{fs, path::Path};
@@ -8,8 +8,9 @@ pub fn run(storage: &Storage, file: Option<&str>) -> Result<(), Error> {
     let desc = storage.load_descriptions()?;
 
     if Path::new(export_path).exists() {
-        if !utils::confirm(&format!("File '{}' exists. Overwrite?", export_path)) {
-            println!("Export cancelled");
+        println!("file already exists: {}", export_path);
+        if !utils::confirm("overwrite?") {
+            println!("cancelled");
             return Ok(());
         }
     }
@@ -22,7 +23,7 @@ pub fn run(storage: &Storage, file: Option<&str>) -> Result<(), Error> {
     let content = serde_json::to_string_pretty(&desc)?;
     fs::write(export_path, content)?;
 
-    println!("Exported to {}", export_path);
+    println!("exported to {}", export_path);
 
     Ok(())
 }

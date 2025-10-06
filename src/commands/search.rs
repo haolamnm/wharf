@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::errors::Error;
 use crate::storage::Storage;
 
 pub fn run(storage: &Storage, text: &str) -> Result<(), Error> {
@@ -11,7 +11,7 @@ pub fn run(storage: &Storage, text: &str) -> Result<(), Error> {
         .collect();
 
     if results.is_empty() {
-        println!("No results found for: {}", text);
+        println!("no results found for: {}", text);
     } else {
         for (path, description) in results {
             println!("{}: {}", path, description);

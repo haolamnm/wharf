@@ -1,5 +1,5 @@
 use crate::config::{BackupConfig, Config};
-use crate::error::Error;
+use crate::errors::Error;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, path::PathBuf};
 
@@ -66,11 +66,6 @@ impl Storage {
         let content = serde_json::to_string_pretty(desc)?;
         fs::write(&self.storage_path, content)?;
 
-        // Auto-backup if enabled
-        if self.backup_config.auto_backup {
-            let _ = self.backup_descriptions(); // Ignore backup errors during save
-        }
-
         Ok(())
     }
 
@@ -78,7 +73,7 @@ impl Storage {
         if !self.storage_path.exists() {
             return Err(Error::IoError(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                "No descriptions file to backup",
+                "no descriptions file to backup",
             )));
         }
 

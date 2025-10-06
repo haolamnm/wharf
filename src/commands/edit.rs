@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::errors::Error;
 use crate::storage::Storage;
 use crate::utils;
 
@@ -10,9 +10,13 @@ pub fn run(storage: &Storage, path: &str) -> Result<(), Error> {
     let relative_path = utils::get_relative_path(path)?;
     let mut desc = storage.load_descriptions()?;
 
-    let current = desc.descriptions.get(&relative_path).cloned().unwrap_or_default();
+    let current = desc
+        .descriptions
+        .get(&relative_path)
+        .cloned()
+        .unwrap_or_default();
     println!(
-        "Current description: {}",
+        "current description: {}",
         if current.is_empty() {
             "<none>"
         } else {
@@ -20,15 +24,16 @@ pub fn run(storage: &Storage, path: &str) -> Result<(), Error> {
         }
     );
 
-    let new_desc = utils::read_input("New description", &current)?;
+    let new_desc = utils::read_input("new description", &current)?;
     if new_desc.trim().is_empty() {
         return Err(Error::EmptyDescription);
     }
 
-    desc.descriptions.insert(relative_path.clone(), new_desc.clone());
+    desc.descriptions
+        .insert(relative_path.clone(), new_desc.clone());
     storage.save_descriptions(&desc)?;
 
-    println!("Updated: {}: {}", relative_path, new_desc);
+    println!("description updated for: {}", relative_path);
 
     Ok(())
 }

@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::errors::Error;
 use dirs::{cache_dir, data_dir};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -23,8 +23,8 @@ pub struct DirsConfig {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct BackupConfig {
-    #[serde(default = "default_auto_backup")]
-    pub auto_backup: bool,
+    #[serde(default = "default_max_backups")]
+    pub max_backups: usize,
 
     #[serde(default = "default_timestamp_format")]
     pub timestamp_format: String,
@@ -42,8 +42,8 @@ fn default_backup_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("wharf"))
 }
 
-fn default_auto_backup() -> bool {
-    false
+fn default_max_backups() -> usize {
+    5
 }
 
 fn default_timestamp_format() -> String {
@@ -79,7 +79,7 @@ impl Default for DirsConfig {
 impl Default for BackupConfig {
     fn default() -> Self {
         Self {
-            auto_backup: default_auto_backup(),
+            max_backups: default_max_backups(),
             timestamp_format: default_timestamp_format(),
         }
     }

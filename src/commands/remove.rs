@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::errors::Error;
 use crate::storage::Storage;
 use crate::utils;
 
@@ -13,7 +13,7 @@ pub fn run(storage: &Storage, path: &str) -> Result<(), Error> {
     desc.descriptions.remove(&relative_path);
     storage.save_descriptions(&desc)?;
 
-    println!("Removed description for: {}", relative_path);
+    println!("description removed for: {}", relative_path);
 
     Ok(())
 }

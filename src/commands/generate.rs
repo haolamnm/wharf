@@ -1,5 +1,5 @@
 use crate::Shell;
-use crate::error::Error;
+use crate::errors::Error;
 use clap::CommandFactory;
 use std::io;
 

@@ -15,14 +15,14 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::ConfigError(msg) => write!(f, "Configuration error: {}", msg),
-            Error::IoError(err) => write!(f, "I/O error: {}", err),
-            Error::JsonError(err) => write!(f, "JSON error: {}", err),
-            Error::TomlError(err) => write!(f, "TOML error: {}", err),
-            Error::PathNotFound(path) => write!(f, "Path not found: {}", path),
-            Error::DescriptionNotFound(path) => write!(f, "Description not found for: {}", path),
-            Error::EmptyDescription => write!(f, "Description cannot be empty"),
-            Error::ImportError(msg) => write!(f, "Import error: {}", msg),
+            Error::ConfigError(msg) => write!(f, "configuration error: {}", msg),
+            Error::IoError(err) => write!(f, "io error: {}", err),
+            Error::JsonError(err) => write!(f, "json error: {}", err),
+            Error::TomlError(err) => write!(f, "toml error: {}", err),
+            Error::PathNotFound(path) => write!(f, "path not found: {}", path),
+            Error::DescriptionNotFound(path) => write!(f, "description not found for: {}", path),
+            Error::EmptyDescription => write!(f, "description cannot be empty"),
+            Error::ImportError(msg) => write!(f, "import error: {}", msg),
         }
     }
 }

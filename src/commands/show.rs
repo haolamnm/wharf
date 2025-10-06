@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::errors::Error;
 use crate::storage::Storage;
 use crate::utils;
 
@@ -9,7 +9,7 @@ pub fn run(storage: &Storage, path: &str) -> Result<(), Error> {
     if let Some(description) = desc.descriptions.get(&relative_path) {
         println!("{}: {}", relative_path, description);
     } else {
-        println!("{}: No description found", relative_path);
+        println!("{}: no description found", relative_path);
 
         // Suggest similar paths
         let similar: Vec<_> = desc
@@ -20,13 +20,13 @@ pub fn run(storage: &Storage, path: &str) -> Result<(), Error> {
             .collect();
 
         if !similar.is_empty() {
-            println!("Similar paths with descriptions:");
+            println!("similar paths with descriptions:");
             for similar_path in similar {
                 println!("  {}", similar_path);
             }
         } else {
             println!(
-                "Add a description with: wharf add \"{}\" \"description\"",
+                "add a description with: wharf add \"{}\" \"description\"",
                 relative_path
             );
         }
