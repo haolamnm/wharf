@@ -1,4 +1,5 @@
 pub mod add;
+pub mod autoremove;
 pub mod edit;
 pub mod export;
 pub mod generate;

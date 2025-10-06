@@ -5,6 +5,8 @@ mod storage;
 mod utils;
 
 use clap::{Parser, Subcommand};
+use error::Error;
+use std::process;
 
 #[derive(Subcommand, Clone)]
 pub enum Shell {
@@ -22,7 +24,7 @@ pub enum Shell {
 #[command(name = "wharf")]
 #[command(
     about = "A simple file and directory description tool",
-    version = "1.2.0"
+    version = "1.3.0"
 )]
 #[command(arg_required_else_help = true)]
 pub struct Cli {
@@ -44,6 +46,8 @@ pub enum Commands {
     Search { text: String },
     /// Remove description
     Remove { path: String },
+    /// Autoremove descriptions for non-existent paths
+    Autoremove,
     /// Export descriptions to file
     Export { file: Option<String> },
     /// Import descriptions from file
@@ -54,9 +58,6 @@ pub enum Commands {
         shell: Shell,
     },
 }
-
-use error::Error;
-use std::process;
 
 fn main() {
     if let Err(e) = run() {
@@ -81,6 +82,7 @@ fn run() -> Result<(), Error> {
         Commands::List => commands::list::run(&storage),
         Commands::Search { text } => commands::search::run(&storage, &text),
         Commands::Remove { path } => commands::remove::run(&storage, &path),
+        Commands::Autoremove => commands::autoremove::run(&storage),
         Commands::Export { file } => commands::export::run(&storage, file.as_deref()),
         Commands::Import { file } => commands::import::run(&storage, &file),
         Commands::Generate { shell } => commands::generate::run(shell),
