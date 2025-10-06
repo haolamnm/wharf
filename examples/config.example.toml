@@ -1,0 +1,7 @@
+[dirs]
+storage_dir="/home/<username>/.local/share/wharf"
+backup_dir="/home/<username>/.local/share/wharf/backups"
+
+[backup]
+max_backups=5
+timestamp_format="%Y%m%d-%H%M%S"

@@ -1,7 +1,0 @@
-[dirs]
-storage_dir=""
-backup_dir=""
-
-[backup]
-max_backups=5
-timestamp_fmt=""
